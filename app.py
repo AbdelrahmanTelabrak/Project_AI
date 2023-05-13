@@ -35,6 +35,29 @@ board = Build_board()
 printBoard(board)
 
 
+def winning_move(board,piece):
+    for c in range(COLUMNS-3):
+        for r in range (ROWS):
+            if board[r][c] == piece and board [r][c+1] == piece and board [r][c+2] == piece and board[r][c+3]:
+                return True
+#check vertical
+    for c in range(COLUMNS):
+        for r in range (ROWS-3):
+            if board[r][c] == piece and board [r+1][c] == piece and board [r+2][c] == piece and board[r+3][c]:
+                return True
+
+#check + diagonal
+    for c in range(COLUMNS-3):
+        for r in range (ROWS-3):
+            if board[r][c] == piece and board [r+1][c+1] == piece and board [r+2][c+2] == piece and board[r+3][c+3]:
+                return True
+
+#check - diagonal
+    for c in range(COLUMNS-3):
+        for r in range (ROWS-3):
+          if board[r][c] == piece and board [r-1][c+1] == piece and board [r-2][c+2] == piece and board[r-3][c+3]:
+                return True
+
 switch=0 #to turn play to another player
 GameOver = False
 while  (GameOver==False):
@@ -47,6 +70,9 @@ while  (GameOver==False):
         if isValid(board,select):
             row =GetNextRow(board,select)
             SetPiece(board,row,select,1)
+            if winning_move(board,1):
+                print("Player 1 wins ")
+                GameOver=True
 
         # print(select)
 
@@ -57,6 +83,17 @@ while  (GameOver==False):
         if isValid(board,select):
             row = GetNextRow(board,select)
             SetPiece(board,row,select,2)
+            if winning_move(board, 2):
+                print("Player 2 wins ")
+                GameOver = True
 
 
     printBoard(board)
+
+
+
+
+
+
+
+
