@@ -1,10 +1,4 @@
 
-Done:
-	.Play against Computer
-	.calculate the score of the position ( Vertically & Horizontally)
-	.Check score Diagonally
-	.get all valid moves
-	.choose the best move depending on the one with highest score.
 import random
 
 import numpy as np
@@ -95,46 +89,51 @@ def winning_move(board, piece):
 
 
 # -------------Calculate the score of the position---------
-def positionScore(board, piece):
+def evaluateWindow(window, piece):
     score = 0
+    oppPiece = (piece+1)%2
+    if window.count(piece) == 4:
+        score += 1000
+    elif window.count(piece) == 3 and window.count(EMPTY) == 1:
+        score += 5
+    elif window.count(piece) == 2 and window.count(EMPTY) == 2:
+        score +=2
+    elif window.count(oppPiece) == 3 and window.count(EMPTY) == 1:
+        score -= 10
+    return score
 
+def positionScore(board, piece):
+    score = -100
+
+    # calculate center score
+    centerElements = [int(i) for i in list(board[:, 3])]
+    centerCounter = centerElements.count(piece)
+    score += centerCounter*6
     # calculate score horizontally
     for row in range(ROWS):
         rowElements = [int(i) for i in list(board[row, :])]
         for col in range(COLUMNS - 3):
             window = rowElements[col:col + WINDOW_SIZE]
-            if window.count(piece) == 4:
-                score += 1000
-            elif window.count(piece) == 3 and window.count(EMPTY) == 1:
-                score += 10
+            evaluateWindow(window, piece)
 
     # calculate score vertically
     for col in range(COLUMNS):
         colElements = [int(i) for i in list(board[:, col])]
         for row in range(ROWS - 3):
             window = colElements[row:row + WINDOW_SIZE]
-            if window.count(piece) == 4:
-                score += 1000
-            elif window.count(piece) == 3 and window.count(EMPTY) == 1:
-                score += 10
+            evaluateWindow(window, piece)
 
     # calculate score of + diagonal
     for row in range(ROWS - 3):
         for col in range(COLUMNS - 3):
             window = [board[row + i][col + i] for i in range(WINDOW_SIZE)]
-            if window.count(piece) == 4:
-                score += 1000
-            elif window.count(piece) == 3 and window.count(EMPTY) == 1:
-                score += 10
+            evaluateWindow(window, piece)
 
     # calculate score of - diagonal
     for row in range(ROWS - 3):
         for col in range(COLUMNS - 3):
             window = [board[row + 3 - i][col + i] for i in range(WINDOW_SIZE)]
-            if window.count(piece) == 4:
-                score += 1000
-            elif window.count(piece) == 3 and window.count(EMPTY) == 1:
-                score += 10
+            evaluateWindow(window, piece)
 
     return score
 
@@ -147,23 +146,66 @@ def getAllValidMoves(board):
     return validMoves
 
 
-def chooseBestMove(board, piece):
-    # first get all valid moves
-    validMoves = getAllValidMoves(board)
-    bestScore = 0
-    bestMove = random.choice(validMoves)
-    # iterate over moves to get the move with highest score
-    for move in validMoves:
-        row = GetNextRow(board, move)
-        tempBoard = board.copy()
-        SetPiece(tempBoard, row, move, piece)
-        # evaluate the move
-        score = positionScore(tempBoard, piece)
-        if score > bestScore:
-            bestScore = score
-            bestMove = move
+# def chooseBestMove(board, piece):
+#     # first get all valid moves
+#     validMoves = getAllValidMoves(board)
+#     bestScore = 0
+#     bestMove = random.choice(validMoves)
+#     # iterate over moves to get the move with highest score
+#     for move in validMoves:
+#         row = GetNextRow(board, move)
+#         tempBoard = board.copy()
+#         SetPiece(tempBoard, row, move, piece)
+#         # evaluate the move
+#         score = positionScore(tempBoard, piece)
+#         if score > bestScore:
+#             bestScore = score
+#             bestMove = move
+#
+#     return bestMove
 
-    return bestMove
+# ------------Implementing MINMAX--------------
+def isTerminalNode(board):
+    return winning_move(board, PLAYER_PIECE) or winning_move(board, AI_PIECE) or len(getAllValidMoves(board)) == 0
+
+def minmax(board, depth, maxPlayer):
+    validMoves = getAllValidMoves(board)
+    isTerminal = isTerminalNode(board)
+    if depth==0 or isTerminal:
+        if isTerminal:
+            if winning_move(board, AI_PIECE):
+                return (None, 1000000000)
+            elif winning_move(board, PLAYER_PIECE):
+                return (None, -100000000)
+            else:
+                return (None, 0)
+        else: #for if depth==0
+            return (None, positionScore(board, AI_PIECE))
+    if maxPlayer:
+        score = -math.inf
+        column = random.choice(validMoves)
+        for move in validMoves:
+            row = GetNextRow(board, move)
+            tempBoard = board.copy()
+            SetPiece(tempBoard, row, move, AI_PIECE)
+            newScore = minmax(tempBoard, depth-1, False)[1]
+            if newScore>score:
+                score = newScore
+                column = move
+        return column, score
+
+    else:
+        score = math.inf
+        column = random.choice(validMoves)
+        for move in validMoves:
+            row = GetNextRow(board, move)
+            tempBoard = board.copy()
+            SetPiece(tempBoard, row, move, PLAYER_PIECE)
+            newScore = minmax(tempBoard, depth-1, True)[1]
+            if newScore<score:
+                score = newScore
+                column = move
+        return column, score
 
 
 ################ function to check winning###################
@@ -248,7 +290,8 @@ while (GameOver == False):
             #
             # # Player 2 play:
     if switch == AI and not GameOver:
-        select = chooseBestMove(board, AI_PIECE)
+        #select = chooseBestMove(board, AI_PIECE)
+        select, minmaxScore = minmax(board, 4, True)
         switch = PLAYER
         if isValid(board, select):
             row = GetNextRow(board, select)
@@ -263,3 +306,5 @@ while (GameOver == False):
             draw(board)
     if GameOver == True:
         pygame.time.wait(1000)
+
+
