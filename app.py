@@ -1,11 +1,108 @@
+#Done:
+	#add a function "evaluateWindow" to evaluate each window to clean the code
+	#"evaluateWindow" can now make the Comp. agent block player's winning move
+	#Implementing "isTerminal" to check if you reached the final nodes
+	#Implementing MINMAX algorithm
+	#No need for "chooseBestMove"
 
 import random
 
 import numpy as np
 import pygame
-
+from pygame.locals import *
 import sys
 import math
+
+
+#=============== GUI to select the algorithm type and difficulty level of the game ====
+# Initialize Pygame
+pygame.init()
+
+# Set up the screen
+screen_width = 400
+screen_height = 300
+screen = pygame.display.set_mode((screen_width, screen_height))
+pygame.display.set_caption("Game Settings")
+
+# Colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+
+# Fonts
+font = pygame.font.Font(None, 24)
+
+# Game settings
+selected_algorithm = None
+selected_difficulty = None
+
+# Algorithm types and difficulty levels
+algorithm_types = ["MiniMax", " Alpha-Beta"]
+difficulty_levels = ["Easy", "Medium", "Hard"]
+
+
+# Function to draw the settings screen
+def draw_settings_screen():
+    screen.fill(WHITE)
+
+    # Draw algorithm type selection
+    algorithm_text = font.render("Select Algorithm Type:", True, BLACK)
+    screen.blit(algorithm_text, (50, 50))
+    algorithm_y = 80
+    for algorithm in algorithm_types:
+        algorithm_button = pygame.Rect(50, algorithm_y, 150, 30)
+        pygame.draw.rect(screen, BLACK, algorithm_button, 2)
+        algorithm_text = font.render(algorithm, True, BLACK)
+        screen.blit(algorithm_text, (60, algorithm_y + 5))
+        algorithm_y += 40
+
+    # Draw difficulty level selection
+    difficulty_text = font.render("Select Difficulty Level:", True, BLACK)
+    screen.blit(difficulty_text, (220, 50))
+    difficulty_y = 80
+    for difficulty in difficulty_levels:
+        difficulty_button = pygame.Rect(220, difficulty_y, 150, 30)
+        pygame.draw.rect(screen, BLACK, difficulty_button, 2)
+        difficulty_text = font.render(difficulty, True, BLACK)
+        screen.blit(difficulty_text, (230, difficulty_y + 5))
+        difficulty_y += 40
+
+    pygame.display.update()
+
+
+# Game loop
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == QUIT:
+            running = False
+        elif event.type == MOUSEBUTTONDOWN:
+            mouse_pos = pygame.mouse.get_pos()
+
+            # Check algorithm type selection
+            for i in range(len(algorithm_types)):
+                algorithm_button = pygame.Rect(50, 80 + (40 * i), 150, 30)
+                if algorithm_button.collidepoint(mouse_pos):
+                    selected_algorithm = algorithm_types[i]
+
+            # Check difficulty level selection
+            for i in range(len(difficulty_levels)):
+                difficulty_button = pygame.Rect(220, 80 + (40 * i), 150, 30)
+                if difficulty_button.collidepoint(mouse_pos):
+                    selected_difficulty = difficulty_levels[i]
+
+    # Draw the settings screen
+    draw_settings_screen()
+
+# Print selected settings
+print("Selected Algorithm Type:", selected_algorithm)
+print("Selected Difficulty Level:", selected_difficulty)
+
+# Quit Pygame
+pygame.quit()
+
+#=============== GUI to select the algorithm type and difficulty level of the game ====
+
+
 
 COLUMNS = 7
 ROWS = 6
@@ -146,25 +243,25 @@ def getAllValidMoves(board):
     return validMoves
 
 
-# def chooseBestMove(board, piece):
-#     # first get all valid moves
-#     validMoves = getAllValidMoves(board)
-#     bestScore = 0
-#     bestMove = random.choice(validMoves)
-#     # iterate over moves to get the move with highest score
-#     for move in validMoves:
-#         row = GetNextRow(board, move)
-#         tempBoard = board.copy()
-#         SetPiece(tempBoard, row, move, piece)
-#         # evaluate the move
-#         score = positionScore(tempBoard, piece)
-#         if score > bestScore:
-#             bestScore = score
-#             bestMove = move
-#
-#     return bestMove
+def chooseBestMove(board, piece):
+    # first get all valid moves
+    validMoves = getAllValidMoves(board)
+    bestScore = 0
+    bestMove = random.choice(validMoves)
+    # iterate over moves to get the move with highest score
+    for move in validMoves:
+        row = GetNextRow(board, move)
+        tempBoard = board.copy()
+        SetPiece(tempBoard, row, move, piece)
+        # evaluate the move
+        score = positionScore(tempBoard, piece)
+        if score > bestScore:
+            bestScore = score
+            bestMove = move
 
-# ------------Implementing MINMAX--------------
+    return bestMove
+
+# ------------Implementing MINMAX------------------------------------
 def isTerminalNode(board):
     return winning_move(board, PLAYER_PIECE) or winning_move(board, AI_PIECE) or len(getAllValidMoves(board)) == 0
 
@@ -206,6 +303,68 @@ def minmax(board, depth, maxPlayer):
                 score = newScore
                 column = move
         return column, score
+
+
+# ------------Implementing MINMAX------------------------------------
+
+
+
+# -----------------improve the code and implement the Alpha-Beta pruning algorithm---------
+
+
+def Minmax(board, depth, alpha, beta, maxPlayer):
+    validMoves = getAllValidMoves(board)
+    isTerminal = isTerminalNode(board)
+
+    if depth == 0 or isTerminal:
+        if isTerminal:
+            if winning_move(board, AI_PIECE):
+                return (None, 1000000000)
+            elif winning_move(board, PLAYER_PIECE):
+                return (None, -100000000)
+            else:
+                return (None, 0)
+        else:
+            return (None, positionScore(board, AI_PIECE))
+
+    if maxPlayer:
+        score = -math.inf
+        column = random.choice(validMoves)
+        for move in validMoves:
+            row = GetNextRow(board, move)
+            tempBoard = board.copy()
+            SetPiece(tempBoard, row, move, AI_PIECE)
+            newScore = Minmax(tempBoard, depth - 1, alpha, beta, False)[1]
+
+            if newScore > score:
+                score = newScore
+                column = move
+
+            alpha = max(alpha, score)
+            if alpha >= beta:
+                break
+
+        return column, score
+    else:
+        score = math.inf
+        column = random.choice(validMoves)
+        for move in validMoves:
+            row = GetNextRow(board, move)
+            tempBoard = board.copy()
+            SetPiece(tempBoard, row, move, PLAYER_PIECE)
+            newScore = Minmax(tempBoard, depth - 1, alpha, beta, True)[1]
+
+            if newScore < score:
+                score = newScore
+                column = move
+
+            beta = min(beta, score)
+            if alpha >= beta:
+                break
+
+        return column, score
+
+# -----------------improve the code and implement the Alpha-Beta pruning algorithm---------
 
 
 ################ function to check winning###################
@@ -257,47 +416,66 @@ while (GameOver == False):
         if event.type == pygame.QUIT:  ## 3shan lma ndos 3la X y5rgny mn el window
             sys.exit()
 
-        if event.type == pygame.MOUSEMOTION:
-            pygame.draw.rect(screen, black, (0, 0, width, SIZEOFSQUARE))
-            posx = event.pos[0]
-            if switch == 0:
-                pygame.draw.circle(screen, red, (posx, int(SIZEOFSQUARE / 2)), radius)
+        # if event.type == pygame.MOUSEMOTION:
+        #     pygame.draw.rect(screen, black, (0, 0, width, SIZEOFSQUARE))
+        #     posx = event.pos[0]
+        #     if switch == 0:
+        #         pygame.draw.circle(screen, red, (posx, int(SIZEOFSQUARE / 2)), radius)
 
         pygame.display.update()
 
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            pygame.draw.rect(screen, black, (0, 0, width, SIZEOFSQUARE))
-            # print(event.pos)
-            # continue
-            # #Player 1 play:
-            if switch == 0:
-                posx = event.pos[0]
+        # if event.type == pygame.MOUSEBUTTONDOWN:
+        #     pygame.draw.rect(screen, black, (0, 0, width, SIZEOFSQUARE))
+        #     # print(event.pos)
+        #     # continue
+        #     # #Player 1 play:
+        if switch == 0:
+            select = chooseBestMove(board, PLAYER_PIECE)
+            # posx = event.pos[0]
 
-                select = int(math.floor(posx / SIZEOFSQUARE))  # int(input("Select (player 1) from 0-6: "))
-                switch = 1
-                if isValid(board, select):
-                    row = GetNextRow(board, select)
-                    SetPiece(board, row, select, PLAYER_PIECE)
-                    if winning_move(board, PLAYER_PIECE):
-                        label = font.render("Player 1 wins", 1, red)
-                        screen.blit(label, (40, 10))
-                        GameOver = True
-
-                    printBoard(board)
-                    draw(board)
+            #select = int(math.floor(posx / SIZEOFSQUARE))  # int(input("Select (player 1) from 0-6: "))
+            switch = 1
+            if isValid(board, select):
+                row = GetNextRow(board, select)
+                SetPiece(board, row, select, PLAYER_PIECE)
+                if winning_move(board, PLAYER_PIECE):
+                    label = font.render("Computer wins", 1, red)
+                    screen.blit(label, (40, 10))
+                    GameOver = True
+                pygame.time.wait(500)
+                printBoard(board)
+                draw(board)
             #
             #      #print(select)
             #
             # # Player 2 play:
     if switch == AI and not GameOver:
         #select = chooseBestMove(board, AI_PIECE)
-        select, minmaxScore = minmax(board, 4, True)
+
+        #select algo and depth
+        if selected_algorithm=="MiniMax":
+            if selected_difficulty == "Easy":
+                select, minmaxScore = minmax(board, 1, True)
+            elif selected_difficulty == "Medium":
+                select,minmaxScore = minmax(board, 3, True)
+            elif selected_difficulty == "Hard":
+                select,minmaxScore = minmax(board, 5, True)
+        else: #Alpha-Beta
+            if selected_difficulty == "Easy":
+                select, minmaxScore = Minmax(board, 1,-math.inf,math.inf, True)
+            elif selected_difficulty == "Medium":
+                select, minmaxScore = Minmax(board, 3,-math.inf,math.inf, True)
+            elif selected_difficulty == "Hard":
+                select, minmaxScore = Minmax(board, 5, -math.inf, math.inf, True)
+
+
+
         switch = PLAYER
         if isValid(board, select):
             row = GetNextRow(board, select)
             SetPiece(board, row, select, AI_PIECE)
             if winning_move(board, AI_PIECE):
-                label = font.render("Player 2 wins", 1, yellow)
+                label = font.render("Ai wins", 1, yellow)
                 screen.blit(label, (40, 10))
                 GameOver = True
 
@@ -305,6 +483,6 @@ while (GameOver == False):
             printBoard(board)
             draw(board)
     if GameOver == True:
-        pygame.time.wait(1000)
+        pygame.time.wait(5000)
 
 
